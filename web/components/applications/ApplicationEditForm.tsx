@@ -19,6 +19,8 @@ export function ApplicationEditForm({
   const [locationText, setLocationText] = useState(application.locationText ?? "");
   const [salaryText, setSalaryText] = useState(application.salaryText ?? "");
   const [appliedAt, setAppliedAt] = useState(toDateInputValue(application.appliedAt));
+  const [postedAt, setPostedAt] = useState(toDateInputValue(application.postedAt));
+  const [companyLogoUrl, setCompanyLogoUrl] = useState(application.companyLogoUrl ?? "");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -28,7 +30,9 @@ export function ApplicationEditForm({
     jobTitle !== application.jobTitle ||
     locationText !== (application.locationText ?? "") ||
     salaryText !== (application.salaryText ?? "") ||
-    appliedAt !== toDateInputValue(application.appliedAt);
+    appliedAt !== toDateInputValue(application.appliedAt) ||
+    postedAt !== toDateInputValue(application.postedAt) ||
+    companyLogoUrl !== (application.companyLogoUrl ?? "");
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -42,6 +46,8 @@ export function ApplicationEditForm({
         locationText: locationText.trim() || null,
         salaryText: salaryText.trim() || null,
         appliedAt: appliedAt || null,
+        postedAt: postedAt || null,
+        companyLogoUrl: companyLogoUrl.trim() || null,
       });
       onSaved(updated);
       setSuccess(true);
@@ -97,6 +103,25 @@ export function ApplicationEditForm({
             type="date"
             value={appliedAt}
             onChange={(e) => setAppliedAt(e.target.value)}
+            className="mt-1.5 block w-full rounded-md px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-neutral-900">Posted on</label>
+          <input
+            type="date"
+            value={postedAt}
+            onChange={(e) => setPostedAt(e.target.value)}
+            className="mt-1.5 block w-full rounded-md px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-neutral-900">Company logo URL</label>
+          <input
+            type="url"
+            value={companyLogoUrl}
+            onChange={(e) => setCompanyLogoUrl(e.target.value)}
+            placeholder="https://…"
             className="mt-1.5 block w-full rounded-md px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-900"
           />
         </div>
