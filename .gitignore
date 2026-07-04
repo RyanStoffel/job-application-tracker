@@ -1,0 +1,22 @@
+docs/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Java / Maven
+target/
+*.class
+
+# Extension build output
+extension/dist/
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
