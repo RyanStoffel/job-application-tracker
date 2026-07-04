@@ -12,6 +12,7 @@
 import { extractListingFromPage } from "./selectors";
 import { renderPrompt, removeBanner, type PromptState } from "./prompt";
 import { canonicalizeListingUrl } from "../shared/url";
+import { isExtensionContextValid } from "../shared/extension-context";
 import type { ExtractedListing } from "../shared/types";
 import type { ExtensionMessage, AddListingResponse } from "../shared/messages";
 
@@ -75,6 +76,15 @@ function pollForListing(canonicalUrl: string, attemptsLeft: number): void {
   stopPolling();
   let remaining = attemptsLeft;
   pollHandle = window.setInterval(() => {
+    // The extension was reloaded while this tab's old content script is
+    // still alive — stop cleanly instead of throwing on every tick (see
+    // shared/extension-context.ts). The page needs a refresh to pick up
+    // the current extension; nothing more we can do from here.
+    if (!isExtensionContextValid()) {
+      stopPolling();
+      return;
+    }
+
     remaining -= 1;
     // Bail out if the user has already navigated to a different listing.
     if (getCurrentCanonicalUrl() !== canonicalUrl) {
@@ -145,7 +155,15 @@ function sendAddListingMessage(
   onResult: (state: PromptState) => void,
   auto: boolean,
 ): void {
-  const message: ExtensionMessage = { type: "ADD_LISTING", listing, auto };
+  if (!isExtensionContextValid()) {
+    // Sending to an invalidated runtime can hang instead of erroring
+    // immediately — the "Adding to tracker…" banner would otherwise never
+    // resolve. This is the extension-was-reloaded case (see
+    // shared/extension-context.ts): only a page refresh fixes it.
+    onResult({ kind: "error", message: "Extension was updated — please refresh the page and try again." });
+    return;
+  }
+  const message: ExtensionMessage = { type: "ADD_LISTING", listing, auto, source: "linkedin" };
   chrome.runtime.sendMessage(message, (response: AddListingResponse | undefined) => {
     // chrome.runtime.lastError happens if the background worker isn't
     // reachable (e.g. extension reloaded); treat as a generic error rather
@@ -303,6 +321,10 @@ window.addEventListener("job-tracker:locationchange", detectListing);
 
 let mutationDebounce: number | null = null;
 const observer = new MutationObserver(() => {
+  if (!isExtensionContextValid()) {
+    observer.disconnect();
+    return;
+  }
   if (mutationDebounce !== null) window.clearTimeout(mutationDebounce);
   mutationDebounce = window.setTimeout(detectListing, 300);
 });
