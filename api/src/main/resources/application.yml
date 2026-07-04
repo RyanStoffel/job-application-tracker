@@ -1,0 +1,37 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: job-tracker-api
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jobtracker}
+    username: ${DB_USER:jobtracker}
+    password: ${DB_PASSWORD:jobtracker}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: false
+
+app:
+  jwt:
+    # Dev-only default. ALWAYS override via the JWT_SECRET env var outside local dev.
+    secret: ${JWT_SECRET:dev-only-insecure-secret-key-change-me-please-32bytes-min}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:10080}
+  cors:
+    web-app-origin: ${WEB_APP_ORIGIN:http://localhost:3000}
+
+logging:
+  level:
+    com.jobtracker.api: INFO
