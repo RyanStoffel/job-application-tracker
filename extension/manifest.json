@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Job Application Tracker – LinkedIn Capture",
+  "version": "0.1.0",
+  "description": "Detects LinkedIn job listings and adds them to your Job Application Tracker with one click.",
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Job Application Tracker"
+  },
+  "background": {
+    "service_worker": "background/sync.js",
+    "scripts": ["background/sync.js"]
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "http://localhost:8080/*",
+    "https://www.linkedin.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/jobs/view/*",
+        "https://www.linkedin.com/jobs/search/*",
+        "https://www.linkedin.com/jobs/search-results/*",
+        "https://www.linkedin.com/jobs/collections/*"
+      ],
+      "js": ["content/linkedin-detector.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/cross-site-toast.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "job-application-tracker@ryanstoffel.dev",
+      "strict_min_version": "115.0"
+    }
+  }
+}

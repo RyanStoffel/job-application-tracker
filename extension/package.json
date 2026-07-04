@@ -1,0 +1,17 @@
+{
+  "name": "job-application-tracker-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Manifest V3 browser extension (Chrome + Firefox) that detects LinkedIn job listings and adds them to the Job Application Tracker.",
+  "type": "module",
+  "scripts": {
+    "build": "npm run typecheck && node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.5.4"
+  }
+}
