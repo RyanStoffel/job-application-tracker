@@ -14,17 +14,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+/**
+ * Generic (non-LinkedIn) fallback capture endpoint used by the extension's
+ * generic content-script parser for unsupported/unrecognized job sites - see
+ * docs/ARCHITECTURE.md "Generic capture flow". Same request/response shape
+ * as POST /api/integrations/linkedin; creates records as source=other.
+ */
 @RestController
-@RequestMapping("/api/integrations/linkedin")
+@RequestMapping("/api/integrations/capture")
 @RequiredArgsConstructor
-public class LinkedInController {
+public class CaptureController {
 
-    private final LinkedInService linkedInService;
+    private final GenericCaptureService genericCaptureService;
 
     @PostMapping
     public ResponseEntity<ApplicationDto> ingest(@AuthenticationPrincipal UUID userId,
                                                   @Valid @RequestBody CaptureIngestRequest req) {
-        IngestionService.IngestResult result = linkedInService.ingest(userId, req);
+        IngestionService.IngestResult result = genericCaptureService.ingest(userId, req);
         HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
         return ResponseEntity.status(status).body(result.application());
     }

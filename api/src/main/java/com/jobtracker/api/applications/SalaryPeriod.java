@@ -3,10 +3,11 @@ package com.jobtracker.api.applications;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum ApplicationSource {
-    LINKEDIN,
-    MANUAL,
-    OTHER;
+public enum SalaryPeriod {
+    YEARLY,
+    MONTHLY,
+    WEEKLY,
+    HOURLY;
 
     @JsonValue
     public String toJson() {
@@ -14,10 +15,10 @@ public enum ApplicationSource {
     }
 
     @JsonCreator
-    public static ApplicationSource fromJson(String value) {
+    public static SalaryPeriod fromJson(String value) {
         if (value == null) {
             return null;
         }
-        return ApplicationSource.valueOf(value.trim().toUpperCase());
+        return SalaryPeriod.valueOf(value.trim().toUpperCase());
     }
 }

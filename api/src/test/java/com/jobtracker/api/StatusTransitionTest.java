@@ -78,6 +78,9 @@ class StatusTransitionTest {
 
         JobApplication persisted = jobApplicationRepository.findById(applicationId).orElseThrow();
         assertThat(persisted.getCurrentStatus()).isEqualTo(ApplicationStatus.APPLIED);
+        // Created as "saved" with no appliedAt; transitioning to "applied" should
+        // auto-fill it since the user never recorded one manually.
+        assertThat(persisted.getAppliedAt()).isNotNull();
 
         List<ApplicationStatusEvent> events = statusEventRepository.findByApplicationIdOrderByChangedAtDesc(applicationId);
         assertThat(events).hasSize(2);

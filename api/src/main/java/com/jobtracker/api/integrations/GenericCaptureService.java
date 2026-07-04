@@ -7,13 +7,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+/** Backs the generic (non-LinkedIn) fallback capture endpoint - see {@code CaptureController}. */
 @Service
 @RequiredArgsConstructor
-public class LinkedInService {
+public class GenericCaptureService {
 
     private final IngestionService ingestionService;
 
     public IngestionService.IngestResult ingest(UUID userId, CaptureIngestRequest req) {
-        return ingestionService.ingest(userId, ApplicationSource.LINKEDIN, req);
+        return ingestionService.ingest(userId, ApplicationSource.OTHER, req);
     }
 }
