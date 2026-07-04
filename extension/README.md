@@ -22,6 +22,9 @@ Output layout:
 dist/
   manifest.json
   content/linkedin-detector.js
+  content/ats-detector.js
+  content/generic-detector.js
+  content/cross-site-toast.js
   background/sync.js
   popup/popup.html
   popup/popup.js
@@ -97,6 +100,33 @@ a CORS-mediated request from a page context.
   succeeded" happens first isn't guaranteed — it tracks both, keyed by the
   LinkedIn tab that had the Apply click, and delivers as soon as it has
   both a destination tab and a confirmed success.
+- **`content/ats-detector`** + **`content/ats/*-selectors`** — dedicated
+  parsers for Greenhouse (`boards.greenhouse.io`/`job-boards.greenhouse.io`),
+  Lever (`jobs.lever.co`), Workday (`*.myworkdayjobs.com`), and Ashby
+  (`jobs.ashbyhq.com`) — the Phase 2 "source coverage" deliverables. The
+  entry point picks the right extractor by hostname; manifest.json scopes
+  its `matches` to exactly these four domains and excludes them from the
+  generic fallback below so only one detector ever runs per page. Like the
+  generic fallback, these always show the confirm banner (no Apply-click
+  auto-capture) and POST to `POST /api/integrations/capture`
+  (`source=other`) — see "ATS parser verification status" below for how
+  confident each one is.
+- **`content/capture-runtime`** — the detect/confirm/send state machine
+  shared by `content/generic-detector` and `content/ats-detector` (prompt
+  handlers, per-tab dedupe, mutation-debounced re-detection). Factored out
+  once so the four ATS parsers and the generic fallback don't each
+  reimplement the same wiring; only the extraction function and the
+  `source` tag passed to the background worker differ per caller.
+- **`content/generic-detector`** + **`content/generic-selectors`** — the
+  last-resort fallback parser for job postings on any site that isn't
+  LinkedIn and doesn't have a dedicated parser (anything other than the five
+  sources above). Runs on `<all_urls>` (excluding linkedin.com and the four
+  ATS domains, which the dedicated flows above already cover), but does a
+  cheap `looksLikeJobPosting()` check first — a schema.org `JobPosting`
+  JSON-LD block, or a job-shaped URL path plus a title signal — and bails
+  immediately otherwise, so it's inert on the vast majority of pages it's
+  injected into. Shares JSON-LD parsing helpers with `content/selectors.ts`
+  and the ATS parsers via `content/json-ld.ts`.
 - **`content/selectors`** — the actual DOM-scraping logic. Tries, in order:
   1. a `application/ld+json` `JobPosting` block, if LinkedIn includes one;
   2. `<meta>` tags (e.g. `og:title`) as a looser fallback;
@@ -158,8 +188,42 @@ this environment):
   `api/` (this was built in parallel against the same `docs/API_CONTRACT.md`
   contract, but never run together).
 
+## ATS parser verification status
+
+All four dedicated ATS parsers are now confirmed working, either against
+real fetched HTML or a live browser pass with the unpacked extension:
+
+- **Greenhouse, Lever, Ashby** (`content/ats/{greenhouse,lever,ashby}-selectors.ts`)
+  — checked against real, live postings (fetched 2026-07-04) before being
+  written, so the primary extraction path (a `window.__remixContext` loader
+  blob for Greenhouse, schema.org `JobPosting` JSON-LD for Lever and Ashby)
+  reflects actual observed markup rather than a guess. The DOM fallback
+  paths (used only when the primary source is missing) are less exercised
+  than the primary path, but built from directly-observed class
+  names/attributes rather than speculation.
+- **Workday** (`content/ats/workday-selectors.ts`) — its `data-automation-id`
+  selectors couldn't be confirmed by fetch alone (every Workday job page
+  fetched during development was an unrendered SPA shell), so it shipped
+  initially unverified; it was then manually confirmed 2026-07-04 against
+  three real tenants (PayPal, Blue Origin, University of Maryland) with the
+  unpacked extension loaded in a real browser — the confirm banner appeared
+  and extracted title/company/location correctly on all three.
+
+Note `data-automation-id="postedOn"` is still deliberately never wired into
+`postedAt` even though the rest of the selectors are confirmed — it renders
+a relative string ("Posted 30+ Days Ago"), not a parseable date, and the API
+would reject/block the whole capture on an unparseable date (see the big
+comment at the top of `workday-selectors.ts`).
+
 ## What's verified
 
 - `npm run build` (`tsc --noEmit` + esbuild bundle) completes cleanly.
 - The extension loads its manifest, background worker, content script, and
   popup HTML/JS as static artifacts in `dist/`.
+- `npm test` (vitest + jsdom) covers the pure extraction logic — JSON-LD
+  parsing, the generic fallback's detection gate, the LinkedIn SDUI
+  title/company-collision recovery, and all four ATS parsers — against
+  fixture HTML shaped like the real markup observed for
+  Greenhouse/Lever/Ashby (see "ATS parser verification status" above). It
+  does not, and cannot, exercise the actual browser extension APIs
+  (`chrome.*`) or a real page's live DOM.

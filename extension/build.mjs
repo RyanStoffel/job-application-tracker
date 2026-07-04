@@ -11,6 +11,8 @@ const watch = process.argv.includes("--watch");
 
 const entryPoints = [
   { in: "src/content/linkedin-detector.ts", out: "content/linkedin-detector" },
+  { in: "src/content/ats-detector.ts", out: "content/ats-detector" },
+  { in: "src/content/generic-detector.ts", out: "content/generic-detector" },
   { in: "src/content/cross-site-toast.ts", out: "content/cross-site-toast" },
   { in: "src/background/sync.ts", out: "background/sync" },
   { in: "src/popup/popup.ts", out: "popup/popup" },
