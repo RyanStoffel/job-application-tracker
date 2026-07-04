@@ -104,6 +104,30 @@ class ApplicationCrudTest {
     }
 
     @Test
+    void createWithSavedStatusLeavesAppliedAtNull() throws Exception {
+        String createBody = """
+                {"companyName":"Delta LLC","jobTitle":"QA Engineer","currentStatus":"saved"}
+                """;
+        mockMvc.perform(post("/api/applications")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(createBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.appliedAt").doesNotExist());
+    }
+
+    @Test
+    void createWithAppliedStatusAutoFillsAppliedAt() throws Exception {
+        String createBody = """
+                {"companyName":"Epsilon Co","jobTitle":"Data Engineer","currentStatus":"applied"}
+                """;
+        mockMvc.perform(post("/api/applications")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(createBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.appliedAt").isNotEmpty());
+    }
+
+    @Test
     void createWithMissingRequiredFieldReturnsValidationErrors() throws Exception {
         String createBody = """
                 {"companyName":"","jobTitle":"","currentStatus":"saved"}

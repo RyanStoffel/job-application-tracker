@@ -1,7 +1,7 @@
 package com.jobtracker.api.integrations;
 
 import com.jobtracker.api.applications.dto.ApplicationDto;
-import com.jobtracker.api.integrations.dto.LinkedInIngestRequest;
+import com.jobtracker.api.integrations.dto.CaptureIngestRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,8 +23,8 @@ public class LinkedInController {
 
     @PostMapping
     public ResponseEntity<ApplicationDto> ingest(@AuthenticationPrincipal UUID userId,
-                                                  @Valid @RequestBody LinkedInIngestRequest req) {
-        LinkedInService.IngestResult result = linkedInService.ingest(userId, req);
+                                                  @Valid @RequestBody CaptureIngestRequest req) {
+        IngestionService.IngestResult result = linkedInService.ingest(userId, req);
         HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
         return ResponseEntity.status(status).body(result.application());
     }

@@ -19,6 +19,8 @@ export function ApplicationFormModal({ onClose, onCreated }: Props) {
   const [locationText, setLocationText] = useState("");
   const [salaryText, setSalaryText] = useState("");
   const [appliedAt, setAppliedAt] = useState("");
+  const [postedAt, setPostedAt] = useState("");
+  const [companyLogoUrl, setCompanyLogoUrl] = useState("");
   const [currentStatus, setCurrentStatus] = useState<Status>("saved");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +37,8 @@ export function ApplicationFormModal({ onClose, onCreated }: Props) {
         locationText: locationText.trim() || null,
         salaryText: salaryText.trim() || null,
         appliedAt: appliedAt || null,
+        postedAt: postedAt || null,
+        companyLogoUrl: companyLogoUrl.trim() || null,
         currentStatus,
       });
       onCreated(created);
@@ -121,6 +125,28 @@ export function ApplicationFormModal({ onClose, onCreated }: Props) {
                 type="date"
                 value={appliedAt}
                 onChange={(e) => setAppliedAt(e.target.value)}
+                className="mt-1.5 block w-full rounded-md px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-neutral-900">Posted on</label>
+              <input
+                type="date"
+                value={postedAt}
+                onChange={(e) => setPostedAt(e.target.value)}
+                className="mt-1.5 block w-full rounded-md px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-semibold text-neutral-900">Company logo URL</label>
+              <input
+                type="url"
+                value={companyLogoUrl}
+                onChange={(e) => setCompanyLogoUrl(e.target.value)}
+                placeholder="https://…"
                 className="mt-1.5 block w-full rounded-md px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-900"
               />
             </div>

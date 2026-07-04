@@ -1,5 +1,9 @@
 package com.jobtracker.api.applications.dto;
 
+import com.jobtracker.api.applications.SalaryPeriod;
+
+import java.math.BigDecimal;
+
 /**
  * Partial update of the editable application fields. {@code currentStatus}
  * is intentionally not present here - per the API contract, status changes
@@ -17,6 +21,19 @@ public record UpdateApplicationRequest(
         String sourceUrl,
         String locationText,
         String salaryText,
-        String appliedAt
+        String appliedAt,
+        String postedAt,
+
+        String locationCity,
+        String locationRegion,
+        String locationCountry,
+        Boolean isRemote,
+
+        BigDecimal salaryMin,
+        BigDecimal salaryMax,
+        String salaryCurrency,
+        SalaryPeriod salaryPeriod,
+
+        String companyLogoUrl
 ) {
 }

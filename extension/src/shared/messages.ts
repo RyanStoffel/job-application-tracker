@@ -15,6 +15,16 @@ export interface AddListingMessage {
    * user is about to navigate anywhere.
    */
   auto: boolean;
+  /**
+   * Which content script produced this listing, so the background worker
+   * knows which capture endpoint to POST to (see background/sync.ts).
+   * "ats" is the dedicated Greenhouse/Lever/Workday/Ashby parsers
+   * (content/ats-detector.ts); like "generic" it POSTs to
+   * /api/integrations/capture (source=other server-side) — the distinct
+   * value is only so logs/telemetry can tell a dedicated-parser capture
+   * apart from the generic JSON-LD/heuristic fallback.
+   */
+  source: "linkedin" | "generic" | "ats";
 }
 
 /**

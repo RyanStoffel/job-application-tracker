@@ -8,7 +8,7 @@
 //    payload to POST /api/integrations/linkedin with the bearer token.
 //  - Handle 401 (missing/expired token) by telling the content script to
 //    show a "please log in" state rather than silently failing or throwing.
-import { ApiError, postLinkedInListing } from "../shared/api";
+import { ApiError, postCaptureListing, postLinkedInListing } from "../shared/api";
 import { getStoredAuth, clearStoredAuth } from "../shared/storage";
 import { canonicalizeListingUrl } from "../shared/url";
 import type { ExtensionMessage, AddListingResponse, ShowSavedToastMessage } from "../shared/messages";
@@ -117,6 +117,7 @@ async function handleAddListing(
   listing: ExtensionMessage["listing"],
   auto: boolean,
   openerTabId: number | undefined,
+  source: "linkedin" | "generic" | "ats",
 ): Promise<AddListingResponse> {
   const auth = await getStoredAuth();
   if (!auth) {
@@ -125,14 +126,18 @@ async function handleAddListing(
   }
 
   try {
-    const { application, created } = await postLinkedInListing(auth.token, {
+    const capturePayload = {
       sourceUrl: canonicalizeListingUrl(listing.sourceUrl),
       companyName: listing.companyName,
       jobTitle: listing.jobTitle,
       locationText: listing.locationText,
       salaryText: listing.salaryText,
       postedAt: listing.postedAt,
-    });
+      companyLogoUrl: listing.companyLogoUrl,
+    };
+    const { application, created } = source === "linkedin"
+      ? await postLinkedInListing(auth.token, capturePayload)
+      : await postCaptureListing(auth.token, capturePayload);
 
     flashBadge("✓", "#1a7f37"); // checkmark
 
@@ -156,6 +161,9 @@ async function handleAddListing(
       }
       return { ok: false, reason: "ERROR", message: err.message };
     }
+    if (err instanceof DOMException && err.name === "AbortError") {
+      return { ok: false, reason: "ERROR", message: "Request timed out — check that the API is reachable and try again." };
+    }
     return {
       ok: false,
       reason: "ERROR",
@@ -172,7 +180,21 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
       // often does) open before the POST resolves.
       registerPendingAutoAdd(openerTabId, message.listing.jobTitle, message.listing.companyName);
     }
-    handleAddListing(message.listing, message.auto, openerTabId).then(sendResponse);
+    handleAddListing(message.listing, message.auto, openerTabId, message.source)
+      .then(sendResponse)
+      // Belt-and-suspenders: handleAddListing's own try/catch should cover
+      // every failure mode, but if something upstream (e.g. getStoredAuth)
+      // ever throws unexpectedly, this still guarantees sendResponse fires
+      // instead of leaving the content script's "Adding to tracker…" banner
+      // waiting on a message channel that will never respond.
+      .catch((err) => {
+        flashBadge("!", "#b91c1c");
+        sendResponse({
+          ok: false,
+          reason: "ERROR",
+          message: err instanceof Error ? err.message : "Unknown error",
+        });
+      });
     // Return true to keep the message channel open for the async response.
     return true;
   }

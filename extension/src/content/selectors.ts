@@ -26,6 +26,7 @@
 
 import type { ExtractedListing } from "../shared/types";
 import { canonicalizeListingUrl, extractJobId } from "../shared/url";
+import { formatSalaryFromJsonLd, readJsonLdJobPosting, readJsonLdLogoUrl } from "./json-ld";
 
 function queryText(selectors: string[], root: ParentNode = document): string | null {
   for (const selector of selectors) {
@@ -50,58 +51,6 @@ function queryAttr(selectors: string[], attr: string, root: ParentNode = documen
     } catch {
       continue;
     }
-  }
-  return null;
-}
-
-interface JsonLdJobPosting {
-  "@type"?: string;
-  title?: string;
-  hiringOrganization?: { name?: string };
-  jobLocation?: { address?: { addressLocality?: string; addressRegion?: string } };
-  baseSalary?: {
-    value?: { minValue?: number; maxValue?: number; value?: number; unitText?: string };
-    currency?: string;
-  };
-  datePosted?: string;
-}
-
-/** Best-effort parse of a JobPosting JSON-LD block, if LinkedIn includes one. */
-function readJsonLdJobPosting(): JsonLdJobPosting | null {
-  const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-  for (const script of scripts) {
-    try {
-      const data = JSON.parse(script.textContent ?? "");
-      const candidates = Array.isArray(data) ? data : [data];
-      for (const candidate of candidates) {
-        if (candidate && candidate["@type"] === "JobPosting") {
-          return candidate as JsonLdJobPosting;
-        }
-        // Some sites nest it under @graph.
-        if (Array.isArray(candidate?.["@graph"])) {
-          const nested = candidate["@graph"].find(
-            (n: JsonLdJobPosting) => n?.["@type"] === "JobPosting",
-          );
-          if (nested) return nested as JsonLdJobPosting;
-        }
-      }
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-function formatSalaryFromJsonLd(baseSalary: JsonLdJobPosting["baseSalary"]): string | null {
-  if (!baseSalary?.value) return null;
-  const { minValue, maxValue, value } = baseSalary.value;
-  const currency = baseSalary.currency ?? "";
-  const unit = baseSalary.value.unitText ? `/${baseSalary.value.unitText.toLowerCase()}` : "";
-  if (typeof minValue === "number" && typeof maxValue === "number") {
-    return `${currency} ${minValue}-${maxValue}${unit}`.trim();
-  }
-  if (typeof value === "number") {
-    return `${currency} ${value}${unit}`.trim();
   }
   return null;
 }
@@ -170,6 +119,15 @@ const SALARY_SELECTORS = [
   "[data-test-salary-info]",
 ];
 
+// No og:image fallback for the logo — that's LinkedIn's own share image, not
+// the company's actual logo, so a wrong guess is worse than leaving it null.
+const COMPANY_LOGO_SELECTORS = [
+  `${SDUI_JOB_DETAILS_SCOPE} a[href*='/company/'] img`,
+  ".job-details-jobs-unified-top-card__company-logo img",
+  ".jobs-unified-top-card__company-logo img",
+  "a[href*='/company/'] img",
+];
+
 const CANONICAL_LINK_SELECTORS = ["link[rel='canonical']"];
 
 const META_TITLE_SELECTORS = ["meta[property='og:title']", "meta[name='title']"];
@@ -179,7 +137,7 @@ const META_TITLE_SELECTORS = ["meta[property='og:title']", "meta[name='title']"]
  * og:title (LinkedIn's actual pattern has varied over time) into title +
  * company as a last-resort fallback when no structured data is found.
  */
-function splitCombinedTitle(raw: string): { title: string | null; company: string | null } {
+export function splitCombinedTitle(raw: string): { title: string | null; company: string | null } {
   const hiringAtMatch = raw.match(/^(.*?)\s+hiring\s+at\s+(.*?)(\s*\|.*)?$/i);
   if (hiringAtMatch) {
     return { title: hiringAtMatch[1]?.trim() ?? null, company: hiringAtMatch[2]?.trim() ?? null };
@@ -200,11 +158,64 @@ function splitCombinedTitle(raw: string): { title: string | null; company: strin
  * that collision happens, look for the next paragraph in the same scope
  * whose text isn't just the company name again.
  */
-function findAlternateSduiParagraph(scope: ParentNode, excludeText: string): string | null {
+export function findAlternateSduiParagraph(scope: ParentNode, excludeText: string): string | null {
   const paragraphs = scope.querySelectorAll(`${SDUI_JOB_DETAILS_SCOPE} p`);
   for (const p of paragraphs) {
     const text = p.textContent?.trim();
     if (text && text !== excludeText) return text;
+  }
+  return null;
+}
+
+// Segments that show up in the same bullet-separated meta line as location
+// (see extractLocationFromMetaLine below) but aren't a location — skip these
+// as candidates rather than trusting positional order, since the exact
+// segment order/count varies (e.g. promoted listings drop the applicant count).
+const META_LINE_NON_LOCATION_PATTERN = /\bago\b|clicked apply|\bapplicants?\b|promoted|\beasy apply\b/i;
+
+/**
+ * CONFIRMED LIVE 2026-07-04: the top-card metadata line (e.g. "Salt Lake
+ * City Metropolitan Area · 6 days ago · Over 100 people clicked apply") is a
+ * `<p>` whose direct children are `<span>` segments separated by small
+ * "· " spacer spans — but like the title/company paragraphs, its own class
+ * names are the same hashed/atomic soup used all over this page, so they're
+ * not a usable selector. What *is* durable is the shape: a `<p>` with
+ * several non-trivial `<span>` children. Location is whichever segment
+ * doesn't look like a relative-time/applicant-count/promoted string, found
+ * by content rather than by position, since segment order/count varies.
+ */
+export function extractLocationFromMetaLine(scope: ParentNode): string | null {
+  const paragraphs = scope.querySelectorAll(`${SDUI_JOB_DETAILS_SCOPE} p`);
+  for (const p of paragraphs) {
+    const segments = Array.from(p.querySelectorAll(":scope > span"))
+      .map((span) => span.textContent?.trim() ?? "")
+      .filter((text) => text.length > 1);
+    if (segments.length < 2) continue;
+
+    const candidate = segments.find((text) => !META_LINE_NON_LOCATION_PATTERN.test(text));
+    if (candidate) return candidate;
+  }
+  return null;
+}
+
+const CURRENCY_AMOUNT_PATTERN = /[$£€]\s?\d[\d,]*(\.\d+)?/;
+
+/**
+ * CONFIRMED LIVE 2026-07-04: salary sometimes renders as a short "insight
+ * pill" near the top of the job details (e.g. "$25/hr - $25/hr", alongside
+ * an "On-site"/"Remote" pill) rather than in a dedicated, selectable salary
+ * element. Scan short `<span>`/`<a>` text nodes in the scope for a
+ * currency-amount pattern. The length cap keeps this from matching the much
+ * longer "About the job" body text, which is what's normally rendered as one
+ * long span rather than many short ones.
+ */
+export function findSalaryBubbleText(scope: ParentNode): string | null {
+  const candidates = scope.querySelectorAll(`${SDUI_JOB_DETAILS_SCOPE} span, ${SDUI_JOB_DETAILS_SCOPE} a`);
+  for (const el of candidates) {
+    const text = el.textContent?.trim() ?? "";
+    if (text.length > 0 && text.length <= 40 && CURRENCY_AMOUNT_PATTERN.test(text)) {
+      return text;
+    }
   }
   return null;
 }
@@ -250,9 +261,16 @@ export function extractListingFromPage(scope: ParentNode = document): ExtractedL
     ].filter(Boolean);
     const locationText =
       (locationParts.length > 0 ? locationParts.join(", ") : null) ||
-      queryText(LOCATION_SELECTORS, scope);
+      queryText(LOCATION_SELECTORS, scope) ||
+      extractLocationFromMetaLine(scope);
 
-    const salaryText = formatSalaryFromJsonLd(jsonLd?.baseSalary) || queryText(SALARY_SELECTORS, scope);
+    const companyLogoUrl = readJsonLdLogoUrl(jsonLd?.hiringOrganization?.logo)
+      || queryAttr(COMPANY_LOGO_SELECTORS, "src", scope);
+
+    const salaryText =
+      formatSalaryFromJsonLd(jsonLd?.baseSalary) ||
+      queryText(SALARY_SELECTORS, scope) ||
+      findSalaryBubbleText(scope);
 
     const canonicalHref = queryAttr(CANONICAL_LINK_SELECTORS, "href", document);
     const rawUrl = canonicalHref || window.location.href;
@@ -270,6 +288,7 @@ export function extractListingFromPage(scope: ParentNode = document): ExtractedL
       locationText: locationText || null,
       salaryText: salaryText || null,
       postedAt: jsonLd?.datePosted ?? null,
+      companyLogoUrl: companyLogoUrl || null,
     };
   } catch {
     // Extraction must never throw and break the host page — just skip the

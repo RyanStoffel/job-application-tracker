@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum ApplicationSource {
     LINKEDIN,
-    MANUAL;
+    MANUAL,
+    OTHER;
 
     @JsonValue
     public String toJson() {

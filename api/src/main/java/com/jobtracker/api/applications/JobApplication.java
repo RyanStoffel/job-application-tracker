@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -49,6 +50,39 @@ public class JobApplication {
 
     @Column(name = "applied_at")
     private Instant appliedAt;
+
+    @Column(name = "posted_at")
+    private Instant postedAt;
+
+    @Column(name = "location_city")
+    private String locationCity;
+
+    @Column(name = "location_region")
+    private String locationRegion;
+
+    @Column(name = "location_country")
+    private String locationCountry;
+
+    @Column(name = "is_remote")
+    private Boolean isRemote;
+
+    @Column(name = "salary_min", precision = 12, scale = 2)
+    private BigDecimal salaryMin;
+
+    @Column(name = "salary_max", precision = 12, scale = 2)
+    private BigDecimal salaryMax;
+
+    @Column(name = "salary_currency")
+    private String salaryCurrency;
+
+    @Column(name = "salary_period")
+    private SalaryPeriod salaryPeriod;
+
+    @Column(name = "company_logo_url")
+    private String companyLogoUrl;
+
+    @Column(name = "duplicate_of_id")
+    private UUID duplicateOfId;
 
     @Column(name = "current_status", nullable = false)
     private ApplicationStatus currentStatus;

@@ -17,7 +17,9 @@ export const STATUSES: Status[] = [
   "offer",
 ];
 
-export type Source = "linkedin" | "manual";
+export type Source = "linkedin" | "manual" | "other";
+
+export type SalaryPeriod = "yearly" | "monthly" | "weekly" | "hourly";
 
 export interface User {
   id: string;
@@ -36,6 +38,17 @@ export interface Application {
   locationText: string | null;
   salaryText: string | null;
   appliedAt: string | null;
+  postedAt: string | null;
+  locationCity: string | null;
+  locationRegion: string | null;
+  locationCountry: string | null;
+  isRemote: boolean | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryCurrency: string | null;
+  salaryPeriod: SalaryPeriod | null;
+  companyLogoUrl: string | null;
+  duplicateOfId: string | null;
   currentStatus: Status;
   createdAt: string;
   updatedAt: string;
@@ -104,6 +117,8 @@ export interface CreateApplicationPayload {
   locationText: string | null;
   salaryText: string | null;
   appliedAt: string | null;
+  postedAt: string | null;
+  companyLogoUrl: string | null;
   currentStatus: Status;
 }
 
@@ -116,6 +131,8 @@ export type UpdateApplicationPayload = Partial<
     | "locationText"
     | "salaryText"
     | "appliedAt"
+    | "postedAt"
+    | "companyLogoUrl"
   >
 >;
 

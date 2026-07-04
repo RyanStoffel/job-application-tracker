@@ -9,7 +9,7 @@ export type Status =
   | "ghosted"
   | "offer";
 
-export type Source = "linkedin" | "manual";
+export type Source = "linkedin" | "manual" | "other";
 
 export interface User {
   id: string;
@@ -44,14 +44,18 @@ export interface AuthResponse {
   token: string;
 }
 
-/** Request body for POST /api/integrations/linkedin */
-export interface LinkedInListingPayload {
+/**
+ * Request body shared by both capture endpoints: POST /api/integrations/linkedin
+ * and POST /api/integrations/capture (the generic fallback parser's target).
+ */
+export interface CaptureListingPayload {
   sourceUrl: string;
   companyName: string;
   jobTitle: string;
   locationText: string | null;
   salaryText: string | null;
   postedAt: string | null;
+  companyLogoUrl: string | null;
 }
 
 /** What the content-script extractor produces before it's sent anywhere. */
@@ -62,6 +66,7 @@ export interface ExtractedListing {
   locationText: string | null;
   salaryText: string | null;
   postedAt: string | null;
+  companyLogoUrl: string | null;
 }
 
 /** What's persisted in chrome.storage.local under the "auth" key. */
