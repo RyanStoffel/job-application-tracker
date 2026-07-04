@@ -9,7 +9,13 @@ listings and offers to add them to your tracker.
 - `web/` — Next.js frontend (dashboard, home snapshot, application detail, auth)
 - `api/` — Spring Boot REST API (auth, applications, notes, stats, integrations)
 - `extension/` — Manifest V3 browser extension (Chrome + Firefox)
-- `docs/` — planning docs and the [API contract](docs/API_CONTRACT.md)
+- `docs/` — planning and reference docs:
+  - [Roadmap](docs/ROADMAP.md)
+  - [Project plan](docs/PROJECT_PLAN.md)
+  - [Architecture](docs/ARCHITECTURE.md)
+  - [API contract](docs/API_CONTRACT.md)
+  - [Data model](docs/DATA_MODEL.md)
+  - [Implementation guide](docs/AGENTS.md)
 
 ## Local development
 
@@ -23,3 +29,9 @@ listings and offers to add them to your tracker.
 Email/password auth only (OAuth providers are a follow-up phase). Full CRUD
 for job applications, status history, notes, a home stats snapshot, a
 filterable dashboard, and LinkedIn listing capture via the extension.
+
+## Roadmap and planning
+
+- GitHub Project board: <https://github.com/users/RyanStoffel/projects/2>
+- Product roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)
+- Delivery sequencing: [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)
